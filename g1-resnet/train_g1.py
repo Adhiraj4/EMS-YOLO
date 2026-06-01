@@ -73,6 +73,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     if isinstance(hyp, str):
         with open(hyp, errors='ignore') as f:
             hyp = yaml.safe_load(f)  # load hyps dict
+    if opt.lr is not None:
+        hyp['lr0'] = opt.lr
     LOGGER.info(colorstr('hyperparameters: ') + ', '.join(f'{k}={v}' for k, v in hyp.items()))
 
     # Save run settings
@@ -110,12 +112,16 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     #is_coco = isinstance(val_path, str) and val_path.endswith('coco/val2017.txt')  # COCO dataset
     is_coco =False
     # Model
+    import models.yolo
+    import models.common
+    models.yolo.time_window = opt.T
+    models.common.time_window = opt.T
     check_suffix(weights, '.pt')  # check weights
     pretrained = weights.endswith('.pt')
     if pretrained:#false
         with torch_distributed_zero_first(LOCAL_RANK):
             weights = attempt_download(weights)  # download if not found locally
-        ckpt = torch.load(weights, map_location=device)  # load checkpoint
+        ckpt = torch.load(weights, map_location=device, weights_only=False)  # load checkpoint
         model = Model(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) and not resume else []  # exclude keys
         csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
@@ -374,7 +380,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                                            save_dir=save_dir,
                                            plots=True,
                                            callbacks=callbacks,
-                                           compute_loss=compute_loss)
+                                           compute_loss=compute_loss,
+                                           T=opt.T,
+                                           sample_size=opt.sample_size,
+                                           image_shape=opt.image_shape)
 
             # Update best mAP
             fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
@@ -438,7 +447,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                                             verbose=True,
                                             plots=True,
                                             callbacks=callbacks,
-                                            compute_loss=compute_loss)  # val best model with plots
+                                            compute_loss=compute_loss,
+                                            T=opt.T,
+                                            sample_size=opt.sample_size,
+                                            image_shape=opt.image_shape)  # val best model with plots
                     if is_coco:
                         callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
 
@@ -494,6 +506,7 @@ def parse_opt(known=False):
     parser.add_argument('-T', default=5, type=int, help='simulating time-steps')
     parser.add_argument('-sample_size', default=250000, type=int, help='duration of a sample in µs')
     parser.add_argument('-image_shape', default=(240,304), type=tuple, help='spatial resolution of events')
+    parser.add_argument('--lr', type=float, default=None, help='override initial learning rate (lr0)')
 
 
 

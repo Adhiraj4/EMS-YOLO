@@ -162,9 +162,9 @@ def parse_header(f):
 
     if num_comment_line > 0:  # Ensure compatibility with previous files.
         # Read event type
-        ev_type = np.frombuffer(f.read(1), dtype=np.uint8)[0]#以数据流方式读入
+        ev_type = int(np.frombuffer(f.read(1), dtype=np.uint8)[0])
         # Read event size
-        ev_size = np.frombuffer(f.read(1), dtype=np.uint8)[0]
+        ev_size = int(np.frombuffer(f.read(1), dtype=np.uint8)[0])
     else:
         ev_type = 0
         ev_size = sum([int(n[-1]) for _, n in EV_TYPE])

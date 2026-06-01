@@ -1,5 +1,4 @@
 import os
-from turtle import width
 #import tqdm
 
 import torch
@@ -521,18 +520,41 @@ class LoadImagesAndLabels(Dataset):
         # Loads 1 image from dataset index 'i', returns (im, original hw, resized hw)
         
         im, fn = self.ims[i], self.im_files[i]
-        if  im is None: 
+        if im is None: 
             #fn = self.im_files[i]
             #im = cv2.imread(fn)
-            im = np.load(fn)
+            im = np.load(fn)  # shape: (5, 240, 304, 3)
             
-            out_img = np.zeros([5,320,320,3])
-            for i in range(5):
-            # for j in range(sample.shape[1]):
-                out_img[i] = cv2.resize(im[0],(320,320))
-            #del im
-            out_img = np.transpose(out_img,[0,3,1,2])
-            return out_img  # im, hw_original, hw_resized
+            target_T = self.T
+            out_img = np.zeros([target_T, 320, 320, 3], dtype=np.uint8)
+            
+            if target_T == 5:
+                for t in range(5):
+                    out_img[t] = cv2.resize(im[t], (320, 320))
+            elif target_T < 5:
+                bins = [[] for _ in range(target_T)]
+                for t in range(5):
+                    bin_idx = min(int(t * target_T / 5), target_T - 1)
+                    bins[bin_idx].append(im[t])
+                
+                for u in range(target_T):
+                    group = np.array(bins[u])
+                    if len(group) == 1:
+                        merged = group[0]
+                    else:
+                        dev = group.astype(np.float32) - 127.0
+                        idx = np.argmax(np.abs(dev), axis=0)
+                        h, w, c = group.shape[1:]
+                        grid_y, grid_x, grid_c = np.meshgrid(np.arange(h), np.arange(w), np.arange(c), indexing='ij')
+                        merged = group[idx, grid_y, grid_x, grid_c]
+                    out_img[u] = cv2.resize(merged, (320, 320))
+            else:  # target_T > 5
+                for u in range(target_T):
+                    src_idx = min(int(u * 5 / target_T), 4)
+                    out_img[u] = cv2.resize(im[src_idx], (320, 320))
+            
+            out_img = np.transpose(out_img, [0, 3, 1, 2])
+            return out_img
         return self.ims[i]
         
 

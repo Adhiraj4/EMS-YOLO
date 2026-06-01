@@ -112,7 +112,8 @@ def run(data,
         callbacks=Callbacks(),
         compute_loss=None,
         image_shape=(240,304),
-        T=5
+        T=5,
+        sample_size=250000
         ):
     # Initialize/load model and set device
     training = model is not None
@@ -130,6 +131,10 @@ def run(data,
         (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
         # Load model
+        import models.yolo
+        import models.common
+        models.yolo.time_window = T
+        models.common.time_window = T
         model = DetectMultiBackend(weights, device=device, dnn=dnn)
         stride, pt = model.stride, model.pt
         imgsz = check_img_size(imgsz, s=stride)  # check image size
@@ -143,12 +148,33 @@ def run(data,
             LOGGER.info(f'Forcing --batch-size 1 square inference shape(1,3,{imgsz},{imgsz}) for non-PyTorch backends')
 
         # Data
-        #data = check_dataset(data)  # check
+        data_dict = check_dataset(data)
+        val_path = data_dict['val']
+        names = {k: v for k, v in enumerate(model.names if hasattr(model, 'names') else model.module.names)}
+        nc = len(names)
+        is_coco = (nc == 80) or 'coco' in str(val_path)
+        
+        pad = 0.0 if task == 'speed' else 0.5
+        rect = False if task == 'speed' else True
+        
+        if is_coco:
+            from utils.datasets import create_dataloader as create_img_dataloader
+            dataloader = create_img_dataloader(
+                val_path, imgsz, batch_size, stride, single_cls,
+                pad=pad, rect=rect, workers=4, prefix=colorstr('val: ')
+            )[0]
+        else:
+            from utils.datasets_g1T import create_dataloader as create_event_dataloader
+            dataloader = create_event_dataloader(
+                val_path, sample_size, T, image_shape, 'val', batch_size, stride,
+                single_cls, pad=pad, rect=rect, workers=4, prefix=colorstr('val: ')
+            )[0]
 
     # Configure
     model.eval()
-    is_coco = False
-    nc = 2  # number of classes
+    names = {k: v for k, v in enumerate(model.names if hasattr(model, 'names') else model.module.names)}
+    nc = len(names)
+    is_coco = (nc == 80) or (isinstance(data, dict) and 'coco' in str(data.get('val', ''))) or (isinstance(data, str) and 'coco' in data)
     iouv = torch.linspace(0.5, 0.95, 10).to(device)  # iou vector for mAP@0.5:0.95
     niou = iouv.numel()
 
@@ -157,7 +183,7 @@ def run(data,
     if not training:
         print('val  not training model has been used')
         if pt and device.type != 'cpu':
-            model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
+            model(torch.zeros(1, T, 3, imgsz, imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
         pad = 0.0 if task == 'speed' else 0.5
         task = task if task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
     seen = 0
@@ -333,6 +359,11 @@ def parse_opt():
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')
     parser.add_argument('--dnn', action='store_true', help='use OpenCV DNN for ONNX inference')
+    
+    parser.add_argument('-T', default=5, type=int, help='simulating time-steps')
+    parser.add_argument('-sample_size', default=250000, type=int, help='duration of a sample in µs')
+    parser.add_argument('-image_shape', default=(240,304), type=tuple, help='spatial resolution of events')
+    
     opt = parser.parse_args()
     opt.data = check_yaml(opt.data)  # check YAML
     opt.save_json |= opt.data.endswith('coco.yaml')
