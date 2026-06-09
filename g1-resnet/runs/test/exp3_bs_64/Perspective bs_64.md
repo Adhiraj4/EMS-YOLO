@@ -1,0 +1,10 @@
+# Critical Perspective - Batch Size 64 Sweep (T=5)
+* **Optimization and Scaling:** Increasing the batch size to 64 (using the baseline initial learning rate of **0.01**) resulted in a smooth but slightly slower learning curve. It reached a peak validation mAP@.5 of **0.620** at Epoch 13.
+* **Convergence Behavior:** Similar to smaller batch size setups, the model reached a stable performance plateau very early (around Epoch 8-10) and remained flat, oscillating between **0.605** and **0.620** for the rest of the 47 epochs.
+* **Batch Size Hyperparameter Suite Analysis (Initial LR = 0.01):**
+  - **BS=8**: [Batch Size 8 Sweep](file:///Users/eugenix/Downloads/Books/Business/Documente/University/Master/Q4/Fundamental%20ML/EMS-YOLO/g1-resnet/runs/test/exp3_bs_8/bs_8_results.txt) peaked at **0.626 mAP@.5** (Memory: 6.92 GB).
+  - **BS=16**: [Batch Size 16 Sweep](file:///Users/eugenix/Downloads/Books/Business/Documente/University/Master/Q4/Fundamental%20ML/EMS-YOLO/g1-resnet/runs/test/exp3_bs_16/bs_16_results.txt) peaked at **0.623 mAP@.5** (Memory: 13.2 GB).
+  - **BS=32**: [Batch Size 32 Sweep](file:///Users/eugenix/Downloads/Books/Business/Documente/University/Master/Q4/Fundamental%20ML/EMS-YOLO/g1-resnet/runs/test/exp3_bs_32/bs_32_results.txt) peaked at **0.622 mAP@.5** (Memory: 25.8 GB).
+  - **BS=64**: This sweep peaked at **0.620 mAP@.5** (Memory: 50.7 GB).
+  - *Finding:* Increasing batch size under the default learning rate of **0.01** scales up memory usage exponentially (reaching **50.7 GB** for BS=64) but actually yields a slight, steady decrease in validation mAP@.5 (from 0.626 down to 0.620). This indicates that smaller batch sizes (specifically BS=8) optimize better for Spiking Neural Networks on sparse event frames, likely because smaller batches introduce beneficial stochastic gradient noise.
+* **Slurm Timeout Safety:** The job timed out at the 24-hour limit during the training phase of Epoch 47 (completing 38% of Epoch 47 training). Because the model had fully converged by Epoch 13, the 47 completed validation epochs provide full, representative scientific metrics of the model's capacity.

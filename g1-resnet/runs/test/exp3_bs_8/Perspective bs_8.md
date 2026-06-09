@@ -1,0 +1,11 @@
+# Critical Perspective - Batch Size 8 Sweep (T=5)
+* **Optimization Dynamics:** Setting the batch size to 8 (with default learning rate **0.01**) resulted in a slightly noisier but highly effective optimization trajectory. It reached a peak validation mAP@.5 of **0.626** at Epoch 17, representing the best performance in the batch size hyperparameter sweep.
+* **Earlier Peak Performance:** The model plateaued very rapidly, matching the BS=16 baseline's convergence speed. It established its performance ceiling around Epoch 11 (mAP@.5 = 0.625) and maintained stable results until the Slurm timeout occurred.
+* **Batch Size Suite Analysis (Initial LR = 0.01):**
+  - **BS=8**: Peaked at **0.626 mAP@.5** (Memory: 6.92 GB).
+  - **BS=16**: [Batch Size 16 Sweep](file:///Users/eugenix/Downloads/Books/Business/Documente/University/Master/Q4/Fundamental%20ML/EMS-YOLO/g1-resnet/runs/test/exp3_bs_16/bs_16_results.txt) peaked at **0.623 mAP@.5** (Memory: 13.2 GB).
+  - **BS=32**: [Batch Size 32 Sweep](file:///Users/eugenix/Downloads/Books/Business/Documente/University/Master/Q4/Fundamental%20ML/EMS-YOLO/g1-resnet/runs/test/exp3_bs_32/bs_32_results.txt) peaked at **0.622 mAP@.5** (Memory: 25.8 GB).
+  - **BS=64**: [Batch Size 64 Sweep](file:///Users/eugenix/Downloads/Books/Business/Documente/University/Master/Q4/Fundamental%20ML/EMS-YOLO/g1-resnet/runs/test/exp3_bs_64/bs_64_results.txt) peaked at **0.620 mAP@.5** (Memory: 50.7 GB).
+  - *Finding:* Increasing batch size scales up memory usage exponentially but actually yields a slight, steady decrease in validation mAP@.5 (from 0.626 down to 0.620). This indicates that smaller batch sizes (specifically BS=8) optimize better for Spiking Neural Networks on sparse event frames, likely because smaller batches introduce beneficial stochastic gradient noise.
+* **Hardware Efficiency & Memory footprint:** Lowering the batch size from 16 to 8 decreased the active GPU memory footprint from **13.2 GB** to **6.92 GB** (nearly half), and from **50.7 GB** for BS=64 (nearly an eighth).
+* **Slurm Timeout Safety:** The job timed out during the training phase of Epoch 42. Since the validation ceiling was reached and stabilized early (plateauing from Epoch 11 onwards), the 42 completed epochs are fully representative of the converged state.

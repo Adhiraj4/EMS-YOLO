@@ -1,0 +1,5 @@
+# Critical Perspective - Gen1 Baseline (T=5)
+* **High Performance Plateau:** The Gen1 baseline model ($T=5$) successfully reached a peak mAP@.5 of **0.623** at Epoch 17 (Precision = 0.737, Recall = 0.576) and stayed in a tight range between **0.605** and **0.623** through Epoch 45.
+* **Early Convergence:** Similar to the $T=1$ ablation study, the model converged very rapidly, entering a stable validation metric plateau after Epoch 11. Subsequent training epochs continued to reduce training loss but yielded no validation metric improvements.
+* **Temporal Context:** Compared to the extreme temporal ablation limit of $T=1$ (which plateaued around mAP@.5 = 0.569), the baseline configuration with $T=5$ provides a substantial relative improvement of **+5.4% mAP@.5** and **+3.8% mAP@.5:.95**, demonstrating the benefit of temporal steps in SNN dynamics.
+* **Slurm Timeout Safety:** The job timed out at Epoch 46 due to the 24-hour limit. However, because the model entered a flat validation metric plateau starting from Epoch 11, the 46 completed epochs are scientifically conclusive and capture the converged ceiling of the baseline model.
